@@ -1,0 +1,259 @@
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
+public class TollGateSystem
+{
+    private Dictionary<string, Vehicle> vehicles = new Dictionary<string, Vehicle>();
+    private List<Transaction> transactions = new List<Transaction>();
+    private Dictionary<string, User> users = new Dictionary<string, User>();
+
+    private const decimal CarToll = 2.50m;
+    private const decimal TruckToll = 5.00m;
+    private const decimal MotorcycleToll = 1.00m;
+
+    public enum VehicleType
+    {
+        Car,
+        Truck,
+        Motorcycle
+    }
+
+    public class Vehicle
+    {
+        public string LicensePlate { get; set; }
+        public VehicleType Type { get; set; }
+        public DateTime EntryTime { get; set; }
+        public string OwnerEmail { get; set; }
+    }
+
+    public class Transaction
+    {
+        public Vehicle Vehicle { get; set; }
+        public DateTime ExitTime { get; set; }
+        public decimal TollAmount { get; set; }
+    }
+
+    public class User
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Email { get; set; }
+    }
+
+    public void RegisterUser(string firstName, string lastName, string email)
+    {
+        if (users.ContainsKey(email))
+        {
+            Console.WriteLine("User with this email already exists.");
+            return;
+        }
+
+        if (!IsValidEmail(email))
+        {
+            Console.WriteLine("Invalid email format.");
+            return;
+        }
+
+        users.Add(email, new User { FirstName = firstName, LastName = lastName, Email = email });
+        Console.WriteLine($"User {firstName} {lastName} registered successfully.");
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        string pattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+        return Regex.IsMatch(email, pattern);
+    }
+
+    public void EnterVehicle(string licensePlate, VehicleType type, string ownerEmail)
+    {
+        if (!users.ContainsKey(ownerEmail))
+        {
+            Console.WriteLine("Owner email not found. Please register the user first.");
+            return;
+        }
+
+        if (vehicles.ContainsKey(licensePlate))
+        {
+            Console.WriteLine($"Vehicle with license plate {licensePlate} is already inside the system.");
+            return;
+        }
+
+        vehicles.Add(licensePlate, new Vehicle { LicensePlate = licensePlate, Type = type, EntryTime = DateTime.Now, OwnerEmail = ownerEmail });
+        Console.WriteLine($"Vehicle {licensePlate} entered the toll gate at {DateTime.Now}.");
+    }
+
+    public void ExitVehicle(string licensePlate)
+    {
+        if (!vehicles.ContainsKey(licensePlate))
+        {
+            Console.WriteLine($"Vehicle with license plate {licensePlate} not found in the system.");
+            return;
+        }
+
+        Vehicle vehicle = vehicles[licensePlate];
+        decimal tollAmount = CalculateToll(vehicle.Type);
+        DateTime exitTime = DateTime.Now;
+
+        transactions.Add(new Transaction { Vehicle = vehicle, ExitTime = exitTime, TollAmount = tollAmount });
+        vehicles.Remove(licensePlate);
+
+        Console.WriteLine($"Vehicle {licensePlate} exited the toll gate at {exitTime}. Toll paid: ${tollAmount:F2}");
+    }
+
+    private decimal CalculateToll(VehicleType type)
+    {
+        switch (type)
+        {
+            case VehicleType.Car:
+                return CarToll;
+            case VehicleType.Truck:
+                return TruckToll;
+            case VehicleType.Motorcycle:
+                return MotorcycleToll;
+            default:
+                return 0.00m;
+        }
+    }
+
+    public void DisplayTransactions()
+    {
+        Console.WriteLine("\nTransaction History:");
+        foreach (var transaction in transactions)
+        {
+            Console.WriteLine($"License: {transaction.Vehicle.LicensePlate}, Type: {transaction.Vehicle.Type}, Entry: {transaction.Vehicle.EntryTime}, Exit: {transaction.ExitTime}, Toll: ${transaction.TollAmount:F2}");
+        }
+    }
+
+    public void DisplayParkedVehicles()
+    {
+        Console.WriteLine("\nParked Vehicles:");
+        Console.WriteLine("Cars:");
+        foreach (var vehicle in vehicles.Values)
+        {
+            if (vehicle.Type == VehicleType.Car)
+            {
+                Console.WriteLine($"  {vehicle.LicensePlate}");
+            }
+        }
+
+        Console.WriteLine("\nTrucks:");
+        foreach (var vehicle in vehicles.Values)
+        {
+            if (vehicle.Type == VehicleType.Truck)
+            {
+                Console.WriteLine($"  {vehicle.LicensePlate}");
+            }
+        }
+
+        Console.WriteLine("\nMotorcycles:");
+        foreach (var vehicle in vehicles.Values)
+        {
+            if (vehicle.Type == VehicleType.Motorcycle)
+            {
+                Console.WriteLine($"  {vehicle.LicensePlate}");
+            }
+        }
+    }
+
+    public void Run()
+    {
+        while (true)
+        {
+            Console.WriteLine("\nToll Gate System");
+            Console.WriteLine("1. Register User");
+            Console.WriteLine("2. Enter Vehicle");
+            Console.WriteLine("3. Exit Vehicle");
+            Console.WriteLine("4. Display Transactions");
+            Console.WriteLine("5. Display Parked Vehicles");
+            Console.WriteLine("6. Exit System");
+
+            Console.Write("Enter your choice: ");
+            string choice = Console.ReadLine();
+
+            switch (choice)
+            {
+                case "1":
+                    RegisterUserFromConsole();
+                    break;
+                case "2":
+                    EnterVehicleFromConsole();
+                    break;
+                case "3":
+                    ExitVehicleFromConsole();
+                    break;
+                case "4":
+                    DisplayTransactions();
+                    break;
+                case "5":
+                    DisplayParkedVehicles();
+                    break;
+                case "6":
+                    return;
+                default:
+                    Console.WriteLine("Invalid choice. Please try again.");
+                    break;
+            }
+        }
+    }
+
+    private void RegisterUserFromConsole()
+    {
+        Console.Write("Enter first name: ");
+        string firstName = Console.ReadLine();
+        Console.Write("Enter last name: ");
+        string lastName = Console.ReadLine();
+        Console.Write("Enter email: ");
+        string email = Console.ReadLine();
+        RegisterUser(firstName, lastName, email);
+    }
+
+    private void EnterVehicleFromConsole()
+    {
+        Console.Write("Enter license plate: ");
+        string licensePlate = Console.ReadLine();
+
+        Console.WriteLine("Enter vehicle type (1: Car, 2: Truck, 3: Motorcycle): ");
+        if (int.TryParse(Console.ReadLine(), out int typeChoice))
+        {
+            VehicleType type;
+            if (typeChoice == 1)
+            {
+                type = VehicleType.Car;
+            }
+            else if (typeChoice == 2)
+            {
+                type = VehicleType.Truck;
+            }
+            else if (typeChoice == 3)
+            {
+                type = VehicleType.Motorcycle;
+            }
+            else
+            {
+                Console.WriteLine("Invalid vehicle type.");
+                return;
+            }
+            Console.Write("Enter owner email: ");
+            string ownerEmail = Console.ReadLine();
+            EnterVehicle(licensePlate, type, ownerEmail);
+        }
+        else
+        {
+            Console.WriteLine("Invalid input for vehicle type.");
+        }
+    }
+
+    private void ExitVehicleFromConsole()
+    {
+        Console.Write("Enter license plate: ");
+        string licensePlate = Console.ReadLine();
+        ExitVehicle(licensePlate);
+    }
+
+    public static void Main(string[] args)
+    {
+        TollGateSystem tollSystem = new TollGateSystem();
+        tollSystem.Run();
+    }
+}
